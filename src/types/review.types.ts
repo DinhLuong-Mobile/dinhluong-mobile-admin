@@ -15,6 +15,7 @@ export interface AdminCommentResponse {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   imageUrls: string[];
+  replies?: AdminCommentResponse[];
 }
 
 export interface AdminReplyRequest {
