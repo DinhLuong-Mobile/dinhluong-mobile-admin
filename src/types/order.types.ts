@@ -1,3 +1,9 @@
+export interface OrderFilterParams {
+    status?: string;
+    keyword?: string;
+    page?: number;
+    size?: number;
+}
 export interface OrderItemResponse {
   id: number;
   productVariantId: number;

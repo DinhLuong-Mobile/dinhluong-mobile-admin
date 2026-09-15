@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useCallback } from 'react';
 import { message } from 'antd';
 
 import { adminDashboardService } from '../../../services'; 
@@ -15,13 +15,13 @@ export const useDashboard = () => {
     const [aiInsight, setAiInsight] = useState<AiBusinessInsightResponse | null>(null);
     const [isAiModalVisible, setIsAiModalVisible] = useState<boolean>(false);
 
-    const getFilterParams = () => {
+   const getFilterParams = useCallback(() => {
         return {
             time: timeFilter,
             startDate: customDateRange?.[0],
             endDate: customDateRange?.[1]
         };
-    };
+    }, [timeFilter, customDateRange]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -43,7 +43,7 @@ export const useDashboard = () => {
         };
         
         fetchDashboardData();
-    }, [timeFilter, customDateRange]);
+    }, [getFilterParams,timeFilter, customDateRange]);
 
     const handleExportExcel = async () => {
         try {

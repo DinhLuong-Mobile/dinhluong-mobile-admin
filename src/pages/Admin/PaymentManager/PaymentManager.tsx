@@ -1,25 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-    Table, Tag, Button, Space, Select, message, Typography, Card, Input, Tooltip, Modal
+    Table, Tag, Button, Space, Select, Typography, Card, Input, Tooltip
 } from 'antd';
 import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 
+import { usePaymentManager } from './usePaymentManager'; 
+import type { PaymentResponse } from '../../../types/payment.types';
+import { ADMIN_ROUTES } from '../../../constants/routes';
+
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-// --- Định nghĩa Type khớp với DTO PaymentResponse từ Backend ---
-interface PaymentResponse {
-    id: number;
-    orderId: number;
-    method: 'COD' | 'VNPAY'; // Bỏ MOMO
-    amount: number;
-    status: 'PENDING' | 'PAID' | 'FAILED' | 'REFUND_PENDING' | 'REFUNDED'; // Thêm trạng thái hoàn
-    transactionId?: string;
-    paidAt?: string;
-    customerName?: string;
-}
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -27,93 +19,14 @@ const formatCurrency = (amount: number) => {
 
 const PaymentManager: React.FC = () => {
     const navigate = useNavigate();
-    const [payments, setPayments] = useState<PaymentResponse[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
 
-    // States cho bộ lọc API
-    const [filterMethod, setFilterMethod] = useState<string>('ALL');
-    const [filterStatus, setFilterStatus] = useState<string>('ALL');
-    const [searchText, setSearchText] = useState<string>('');
+    const {
+        payments, loading,
+        filterMethod, setFilterMethod,
+        filterStatus, setFilterStatus, setSearchText,
+        fetchPayments, handleConfirmRefund
+    } = usePaymentManager();
 
-    // Lấy Token từ local storage
-    const getAuthToken = () => {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr).token : '';
-    };
-
-    // --- FETCH DATA TỪ BACKEND API ---
-    const fetchPayments = async () => {
-        setLoading(true);
-        try {
-            const token = getAuthToken();
-
-            // Đóng gói các tham số tìm kiếm thành Query String
-            const queryParams = new URLSearchParams({
-                method: filterMethod,
-                status: filterStatus,
-                keyword: searchText
-            }).toString();
-
-            const response = await fetch(`http://localhost:8080/api/admin/payments?${queryParams}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const json = await response.json();
-
-            if (response.ok && json.status === 'success') {
-                setPayments(json.data);
-            } else {
-                message.error(json.message || "Không thể tải danh sách giao dịch");
-            }
-        } catch (error) {
-            message.error("Lỗi kết nối đến máy chủ");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Tự động gọi API mỗi khi các bộ lọc thay đổi
-    useEffect(() => {
-        fetchPayments();
-    }, [filterMethod, filterStatus, searchText]);
-
-    // --- HÀM XỬ LÝ XÁC NHẬN ĐÃ HOÀN TIỀN ---
-    const handleConfirmRefund = (paymentId: number) => {
-        Modal.confirm({
-            title: 'Xác nhận Đã hoàn tiền?',
-            content: 'Bạn có chắc chắn là tiền đã được chuyển trả lại cho khách hàng không? Hành động này không thể hoàn tác.',
-            okText: 'Xác nhận',
-            cancelText: 'Hủy',
-            onOk: async () => {
-                try {
-                    const token = getAuthToken();
-                    const response = await fetch(`http://localhost:8080/api/admin/payments/${paymentId}/refunded`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    const json = await response.json();
-                    if (response.ok && json.status === 'success') {
-                        message.success("Cập nhật trạng thái hoàn tiền thành công!");
-                        fetchPayments(); // Load lại bảng để cập nhật trạng thái mới nhất
-                    } else {
-                        message.error(json.message || "Lỗi khi cập nhật trạng thái");
-                    }
-                } catch (error) {
-                    message.error("Lỗi kết nối máy chủ");
-                }
-            }
-        });
-    };
-
-    // --- CẤU HÌNH CỘT CHO BẢNG ---
     const columns = [
         {
             title: 'Mã GD', dataIndex: 'id', key: 'id',
@@ -123,7 +36,11 @@ const PaymentManager: React.FC = () => {
             title: 'Mã Đơn Hàng', dataIndex: 'orderId', key: 'orderId',
             render: (orderId: number, record: PaymentResponse) => (
                 <Space direction="vertical" size={0}>
-                    <Text strong style={{ color: '#1890ff', cursor: 'pointer' }} onClick={() => navigate(`/admin/orders`)}>
+                    <Text 
+                        strong 
+                        style={{ color: '#1890ff', cursor: 'pointer' }} 
+                        onClick={() => navigate(`${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.ORDERS}`)}
+                    >
                         #{orderId}
                     </Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>{record.customerName}</Text>
@@ -165,16 +82,15 @@ const PaymentManager: React.FC = () => {
             render: (_: any, record: PaymentResponse) => (
                 <Space>
                     <Tooltip title="Xem chi tiết đơn hàng">
-                        <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/admin/orders`)}>Xem ĐH</Button>
+                        <Button 
+                            size="small" 
+                            icon={<EyeOutlined />} 
+                            onClick={() => navigate(`${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.ORDERS}`)}
+                        >
+                            Xem ĐH
+                        </Button>
                     </Tooltip>
                     
-                    {record.method !== 'COD' && record.status === 'PENDING' && (
-                        <Tooltip title="Đồng bộ lại trạng thái từ Cổng thanh toán">
-                            <Button size="small" icon={<ReloadOutlined />} onClick={() => message.info(`Đang kiểm tra lại giao dịch ${record.orderId}...`)} />
-                        </Tooltip>
-                    )}
-
-                    {/* Nút thao tác riêng cho trạng thái chờ hoàn tiền */}
                     {record.status === 'REFUND_PENDING' && (
                         <Tooltip title="Xác nhận đã hoàn trả tiền cho khách">
                             <Button
@@ -196,7 +112,6 @@ const PaymentManager: React.FC = () => {
         <div style={{ padding: 24, background: '#fff', borderRadius: 8 }}>
             <Title level={4} style={{ margin: '0 0 20px 0' }}>Quản lý Giao dịch & Thanh toán</Title>
 
-            {/* --- THANH CÔNG CỤ TÌM KIẾM & LỌC --- */}
             <Card size="small" style={{ marginBottom: 20, background: '#fafafa' }}>
                 <Space wrap size="large">
                     <div>
@@ -234,7 +149,6 @@ const PaymentManager: React.FC = () => {
                 </Space>
             </Card>
 
-            {/* --- BẢNG DỮ LIỆU --- */}
             <Table
                 columns={columns}
                 dataSource={payments}

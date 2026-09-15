@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Table, Tag, Button, Space, Drawer, Descriptions,
     Select, message, Typography, Card, Input, Tabs, Image, List, Modal,
@@ -10,25 +10,12 @@ import {
     DatabaseOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { orderService } from '../../../services/orderService'; // CHÚ Ý: Đảm bảo đường dẫn import này đúng với project của bạn
+
+import { useOrderManager } from './useOrderManager';
+import type { OrderResponse, OrderItemResponse } from '../../../types/order.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-// ==========================================
-// 1. INTERFACES
-// ==========================================
-interface ComboItemDetail { variantId: number; name: string; imageUrl: string; price: number; }
-interface OrderItemResponse { id: number; productVariantId: number; productName: string; variantName?: string; imageUrl: string; quantity: number; priceAtPurchase: number; comboItems: ComboItemDetail[]; }
-interface OrderDetailResponse {
-    id: number; userId: number; totalAmount: number; status: string;
-    createdAt: string; receiverName: string; receiverPhone: string; receiverAddress: string;
-    paymentMethod: string; paymentStatus: string; reason?: string; userNote?: string;
-    discountAmount: number; // Mới
-    deliveredAt?: string;
-    cancelledBy?: string;
-    items: OrderItemResponse[];
-}
 
 const statusConfig: Record<string, { color: string, label: string }> = {
     PENDING: { color: 'orange', label: 'Chờ xác nhận' },
@@ -41,177 +28,22 @@ const statusConfig: Record<string, { color: string, label: string }> = {
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 
-// ==========================================
-// 2. COMPONENT CHÍNH
-// ==========================================
 const OrderManager: React.FC = () => {
-    // --- State Dữ liệu ---
-    const [orders, setOrders] = useState<OrderDetailResponse[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [stats, setStats] = useState({ pending: 0, processing: 0, shipped: 0, delivered: 0, cancelledOrReturned: 0, total: 0 });
+    const {
+        orders, loading, stats, activeTab, currentPage, pageSize, totalElements,
+        drawerVisible, selectedOrder, selectedRowKeys,
+        isReasonModalVisible, pendingStatus, reasonText, isBulkAction,
+        setPageSize, setCurrentPage, setDrawerVisible, setSelectedOrder, setSelectedRowKeys, setIsReasonModalVisible, setReasonText,
+        handleSearch, handleTabChange, handleSelectStatus, handleUpdateStatus, triggerBulkAction, executeBulkUpdate, handleExportExcel
+    } = useOrderManager();
 
-    // --- State Phân trang & Tìm kiếm ---
-    const [activeTab, setActiveTab] = useState<string>('ALL');
-    const [searchText, setSearchText] = useState<string>('');
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(10);
-    const [totalElements, setTotalElements] = useState<number>(0);
-
-    // --- State UI (Drawer, Modal, Table Selection) ---
-    const [drawerVisible, setDrawerVisible] = useState<boolean>(false);
-    const [selectedOrder, setSelectedOrder] = useState<OrderDetailResponse | null>(null);
-    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-    // --- State Lý do Hủy/Hoàn ---
-    const [isReasonModalVisible, setIsReasonModalVisible] = useState<boolean>(false);
-    const [pendingStatus, setPendingStatus] = useState<string>('');
-    const [reasonText, setReasonText] = useState<string>('');
-    const [isBulkAction, setIsBulkAction] = useState<boolean>(false);
-
-    // ==========================================
-    // 3. FETCH API
-    // ==========================================
-    const fetchOrders = async (status: string, keyword: string) => {
-        setLoading(true);
-        try {
-            const data = await orderService.getOrders(status, keyword);
-            setOrders(data);
-            setTotalElements(data.length); // Cập nhật tổng số phần tử cho phân trang
-        } catch (error: any) {
-            message.error(error.message || 'Lỗi tải danh sách đơn hàng');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchOrderStats = async () => {
-        try {
-            const data = await orderService.getOrderStats();
-            setStats(data);
-        } catch (error) {
-            console.error("Lỗi lấy thống kê", error);
-        }
-    };
-
-    // Gọi API khi thay đổi Tab, Page hoặc khi Load lần đầu
-    useEffect(() => {
-        fetchOrders(activeTab, searchText);
-        fetchOrderStats();
-
-        // Tự động Refresh ngầm mỗi 60 giây (Real-time update)
-        const interval = setInterval(() => { fetchOrderStats(); }, 60000);
-        return () => clearInterval(interval);
-    }, [activeTab]);
-
-    // ==========================================
-    // 4. HANDLERS TÌM KIẾM & CHUYỂN TAB
-    // ==========================================
-    const handleSearch = (value: string) => {
-        setSearchText(value);
-        setCurrentPage(1);
-        fetchOrders(activeTab, value);
-    };
-
-    const handleTabChange = (key: string) => {
-        setActiveTab(key);
-        setCurrentPage(1);
-        setSelectedRowKeys([]); // Xóa chọn khi chuyển tab
-    };
-
-    // ==========================================
-    // 5. HANDLERS CẬP NHẬT 1 ĐƠN
-    // ==========================================
-    const handleSelectStatus = (newStatus: string) => {
-        if (newStatus === 'CANCELLED' || newStatus === 'RETURNED') {
-            setIsBulkAction(false);
-            setPendingStatus(newStatus);
-            setReasonText('');
-            setIsReasonModalVisible(true);
-        } else {
-            handleUpdateStatus(newStatus);
-        }
-    };
-
-    const handleUpdateStatus = async (newStatus: string, reason?: string) => {
-        if (!selectedOrder) return;
-        if ((newStatus === 'CANCELLED' || newStatus === 'RETURNED') && !reason?.trim()) {
-            message.warning("Vui lòng nhập lý do!");
-            return;
-        }
-
-        try {
-            await orderService.updateOrderStatus(selectedOrder.id, newStatus, reason);
-            message.success('Cập nhật đơn hàng thành công!');
-
-            setIsReasonModalVisible(false);
-            setDrawerVisible(false);
-
-            fetchOrders(activeTab, searchText);
-            fetchOrderStats();
-        } catch (error: any) {
-            message.error(error.message || 'Lỗi hệ thống');
-        }
-    };
-
-    // ==========================================
-    // 6. HANDLERS THAO TÁC HÀNG LOẠT (BULK UPDATE)
-    // ==========================================
-    const triggerBulkAction = (newStatus: string) => {
-        if (newStatus === 'CANCELLED' || newStatus === 'RETURNED') {
-            setIsBulkAction(true);
-            setPendingStatus(newStatus);
-            setReasonText('');
-            setIsReasonModalVisible(true);
-        } else {
-            executeBulkUpdate(newStatus);
-        }
-    };
-
-    const executeBulkUpdate = async (newStatus: string, reason?: string) => {
-        if (selectedRowKeys.length === 0) return;
-        if ((newStatus === 'CANCELLED' || newStatus === 'RETURNED') && !reason?.trim()) {
-            message.warning("Vui lòng nhập lý do!");
-            return;
-        }
-
-        try {
-            message.loading({ content: 'Đang xử lý...', key: 'bulk' });
-            await orderService.updateBulkStatus(selectedRowKeys as number[], newStatus, reason);
-            message.success({ content: `Đã cập nhật ${selectedRowKeys.length} đơn hàng!`, key: 'bulk' });
-
-            setIsReasonModalVisible(false);
-            setSelectedRowKeys([]);
-
-            fetchOrders(activeTab, searchText, currentPage, pageSize);
-            fetchOrderStats();
-        } catch (error: any) {
-            message.error({ content: error.message || 'Lỗi xử lý hàng loạt', key: 'bulk' });
-        }
-    };
-
-    // ==========================================
-    // 7. XUẤT EXCEL
-    // ==========================================
-    const handleExportExcel = async () => {
-        try {
-            message.loading({ content: 'Đang xuất file...', key: 'export' });
-            await orderService.exportExcel(activeTab, searchText);
-            message.success({ content: 'Xuất Excel thành công!', key: 'export' });
-        } catch (error: any) {
-            message.error({ content: error.message || 'Lỗi khi xuất file', key: 'export' });
-        }
-    };
-
-    // ==========================================
-    // 8. CẤU HÌNH TABLE COLUMNS
-    // ==========================================
     const columns = [
         { title: 'Mã ĐH', dataIndex: 'id', key: 'id', render: (text: number) => <strong>#{text}</strong> },
-        { title: 'Khách hàng', key: 'customer', render: (_: any, record: OrderDetailResponse) => (<div><div style={{ fontWeight: 500 }}>{record.receiverName}</div><Text type="secondary">{record.receiverPhone}</Text></div>) },
+        { title: 'Khách hàng', key: 'customer', render: (_: any, record: OrderResponse) => (<div><div style={{ fontWeight: 500 }}>{record.receiverName}</div><Text type="secondary">{record.receiverPhone}</Text></div>) },
         {
             title: 'Thanh toán',
             key: 'payment',
-            render: (_: any, record: OrderDetailResponse) => (
+            render: (_: any, record: OrderResponse) => (
                 <Space direction="vertical" size={0}>
                     <Tag color={record.paymentMethod === 'VNPAY' ? 'blue' : 'default'} style={{ margin: 0 }}>
                         {record.paymentMethod}
@@ -238,24 +70,21 @@ const OrderManager: React.FC = () => {
         {
             title: 'Tổng tiền',
             key: 'totalAmount',
-            render: (_: any, record: OrderDetailResponse) => (
+            render: (_: any, record: OrderResponse) => (
                 <Space direction="vertical" size={0}>
                     <Text strong type="danger">{formatCurrency(record.totalAmount)}</Text>
-                    {record.discountAmount > 0 && (
+                    {(record.discountAmount ?? 0) > 0 && (
                         <Text delete type="secondary" style={{ fontSize: '11px' }}>
-                            Giảm: {formatCurrency(record.discountAmount)}
+                            Giảm: {formatCurrency(record.discountAmount??0)}
                         </Text>
                     )}
                 </Space>
             )
         },
-
         { title: 'Ngày đặt', dataIndex: 'createdAt', key: 'createdAt', render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm') },
         {
-            title: 'Trạng thái', dataIndex: 'status', key: 'status', render: (status: string, record: OrderDetailResponse) => {
+            title: 'Trạng thái', dataIndex: 'status', key: 'status', render: (status: string, record: OrderResponse) => {
                 const conf = statusConfig[status] || { color: 'default', label: status };
-
-                // Cảnh báo SLA: Nếu đơn PENDING nằm trong kho hơn 2 tiếng -> Hiển thị chấm đỏ
                 const hoursDiff = dayjs().diff(dayjs(record.createdAt), 'hour');
                 const isOverdue = status === 'PENDING' && hoursDiff >= 2;
 
@@ -274,7 +103,7 @@ const OrderManager: React.FC = () => {
         {
             title: 'Thao tác',
             key: 'action',
-            render: (_: any, record: OrderDetailResponse) => (
+            render: (_: any, record: OrderResponse) => (
                 <Space>
                     <Tooltip title="Xem chi tiết đơn hàng">
                         <Button size="small" icon={<EyeOutlined />} onClick={() => { setSelectedOrder(record); setDrawerVisible(true); }}>
@@ -351,15 +180,10 @@ const OrderManager: React.FC = () => {
         { key: 'CANCELLED', label: 'Hủy các đơn đã chọn', danger: true },
     ];
 
-    // ==========================================
-    // 9. RENDER GIAO DIỆN
-    // ==========================================
     const failRate = stats.total > 0 ? ((stats.cancelledOrReturned / stats.total) * 100).toFixed(1) : 0;
 
     return (
         <div style={{ padding: 24, background: '#fff', borderRadius: 8, minHeight: '85vh' }}>
-
-            {/* --- HEADER --- */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <Title level={4} style={{ margin: 0 }}>Quản lý Đơn hàng</Title>
                 <Space>
@@ -374,9 +198,7 @@ const OrderManager: React.FC = () => {
                 </Space>
             </div>
 
-            {/* --- MINI DASHBOARD --- */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                {/* CARD TỔNG ĐƠN (MỚI THÊM) */}
                 <Col xs={12} sm={12} md={4} style={{ display: 'flex', flex: 1 }}>
                     <Card hoverable size="small" bordered={false} onClick={() => handleTabChange('ALL')} style={{ width: '100%', background: '#f5f5f5', borderColor: '#d9d9d9', borderLeft: '4px solid #8c8c8c' }}>
                         <Statistic title="Tổng đơn hàng" value={stats.total} prefix={<DatabaseOutlined />} valueStyle={{ color: '#595959', fontWeight: 'bold' }} />
@@ -409,7 +231,6 @@ const OrderManager: React.FC = () => {
                 </Col>
             </Row>
 
-            {/* --- TABS & THAO TÁC HÀNG LOẠT --- */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabItems} style={{ marginBottom: 0, flex: 1 }} />
 
@@ -422,7 +243,6 @@ const OrderManager: React.FC = () => {
                 )}
             </div>
 
-            {/* --- BẢNG DỮ LIỆU --- */}
             <Table
                 columns={columns}
                 dataSource={orders}
@@ -445,7 +265,6 @@ const OrderManager: React.FC = () => {
                 }}
             />
 
-            {/* --- DRAWER CHI TIẾT --- */}
             <Drawer title={`Chi tiết đơn hàng #${selectedOrder?.id}`} width={750} onClose={() => setDrawerVisible(false)} open={drawerVisible}>
                 {selectedOrder && (
                     <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -480,7 +299,6 @@ const OrderManager: React.FC = () => {
                             <Descriptions.Item label="Người nhận">{selectedOrder.receiverName}</Descriptions.Item>
                             <Descriptions.Item label="Điện thoại">{selectedOrder.receiverPhone}</Descriptions.Item>
                             <Descriptions.Item label="Địa chỉ">{selectedOrder.receiverAddress}</Descriptions.Item>
-                            {/* 🔥 THÊM ĐOẠN NÀY ĐỂ HIỂN THỊ NOTE CỦA KHÁCH */}
                             {selectedOrder.userNote && (
                                 <Descriptions.Item label="Ghi chú của khách">
                                     <Text type="warning">{selectedOrder.userNote}</Text>
@@ -521,7 +339,6 @@ const OrderManager: React.FC = () => {
                                     <Descriptions.Item label="Lý do">
                                         <Text type="danger" strong>{selectedOrder.reason}</Text>
                                     </Descriptions.Item>
-                                    {/* Nếu BE trả về cancelledBy thì hiển thị thêm dòng này */}
                                     {selectedOrder.cancelledBy && (
                                         <Descriptions.Item label="Người thao tác">
                                             <Tag color={selectedOrder.cancelledBy === 'USER' ? 'orange' : 'red'}>
@@ -545,8 +362,8 @@ const OrderManager: React.FC = () => {
                             />
                             <div style={{ textAlign: 'right', marginTop: 16, padding: '10px 0', borderTop: '1px solid #f0f0f0' }}>
                                 <Space direction="vertical" align="end" style={{ width: '100%' }}>
-                                    <Text>Tiền hàng: {formatCurrency(selectedOrder.totalAmount + selectedOrder.discountAmount)}</Text>
-                                    <Text>Giảm giá (Voucher): -{formatCurrency(selectedOrder.discountAmount)}</Text>
+                                    <Text>Tiền hàng: {formatCurrency(selectedOrder.totalAmount +( selectedOrder.discountAmount??0))}</Text>
+                                    <Text>Giảm giá (Voucher): -{formatCurrency(selectedOrder.discountAmount??0)}</Text>
                                     <Title level={4} style={{ margin: 0 }}>
                                         Thực thu: <Text type="danger">{formatCurrency(selectedOrder.totalAmount)}</Text>
                                     </Title>
@@ -557,7 +374,6 @@ const OrderManager: React.FC = () => {
                 )}
             </Drawer>
 
-            {/* --- MODAL LÝ DO HỦY / HOÀN (DÙNG CHUNG) --- */}
             <Modal
                 title={pendingStatus === 'CANCELLED' ? "Xác nhận Hủy đơn hàng" : "Xác nhận Hoàn đơn hàng"}
                 open={isReasonModalVisible}
