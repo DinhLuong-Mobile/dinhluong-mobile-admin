@@ -1,7 +1,8 @@
 import { IHttpClient } from '../../api/IHttpClient';
 import { API_CONFIG } from '../../config/api.config';
 import { IAdminMasterDataService, MasterDataRequest, SpecRequest } from '../interfaces/IAdminMasterDataService';
-import type { ApiResponse } from '../../types/admin.types';
+import type { ApiResponse } from '../../types/common.types';
+import type { Brand, BrandRequest } from '../../types/brand.types';
 
 export class AdminMasterDataService implements IAdminMasterDataService {
     constructor(private readonly httpClient: IHttpClient) {}
@@ -25,19 +26,19 @@ export class AdminMasterDataService implements IAdminMasterDataService {
 
     // 2. Brands
     async getBrands() {
-        return this.httpClient.get<ApiResponse<any>>(API_CONFIG.ADMIN.BRANDS.BASE);
+        return this.httpClient.get<ApiResponse<Brand[]>>(API_CONFIG.ADMIN.BRANDS.BASE);
     }
 
-    async createBrand(data: MasterDataRequest) {
-        return this.httpClient.post<ApiResponse<any>>(API_CONFIG.ADMIN.BRANDS.BASE, data);
+    async createBrand(data: BrandRequest) {
+        return this.httpClient.post<ApiResponse<Brand>>(API_CONFIG.ADMIN.BRANDS.BASE, data);
     }
 
-    async updateBrand(id: number | string, data: MasterDataRequest) {
-        return this.httpClient.put<ApiResponse<any>>(API_CONFIG.ADMIN.BRANDS.BY_ID(id), data);
+    async updateBrand(id: number | string, data: BrandRequest) {
+        return this.httpClient.put<ApiResponse<Brand>>(API_CONFIG.ADMIN.BRANDS.BY_ID(id), data);
     }
 
     async deleteBrand(id: number | string) {
-        return this.httpClient.delete<ApiResponse<any>>(API_CONFIG.ADMIN.BRANDS.BY_ID(id));
+        return this.httpClient.delete<ApiResponse<string>>(API_CONFIG.ADMIN.BRANDS.BY_ID(id));
     }
 
     // 3. Spec Groups
