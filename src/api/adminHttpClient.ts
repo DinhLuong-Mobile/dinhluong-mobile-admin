@@ -156,9 +156,33 @@ class AdminHttpClient implements IHttpClient {
             },
         });
 
-        const responseData = await response.json();
 
-        if (!response.ok || (responseData.code && responseData.code !== 200)) {
+        if (!response.ok) {
+            let errorMessage = 'Get data failed';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+            } catch (e) {
+                // Ignore nếu không parse được JSON lỗi
+            }
+            throw new Error(errorMessage);
+        }
+
+        const responseType = config?.responseType || 'json';
+
+        if (responseType === 'blob') {
+            // Xử lý tải file (Excel, PDF...)
+            const blobData = await response.blob();
+            return blobData as unknown as TResponse; 
+        }
+
+        if (responseType === 'text') {
+            const textData = await response.text();
+            return textData as unknown as TResponse;
+        }
+
+        const responseData = await response.json();
+        if (responseData.code && responseData.code !== 200) {
             const errorData = responseData as ApiError;
             throw new Error(errorData.message || 'Get data failed');
         }

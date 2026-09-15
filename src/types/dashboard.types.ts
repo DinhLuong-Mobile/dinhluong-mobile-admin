@@ -76,3 +76,12 @@ export interface DashboardResponse {
   cancellationStats: CancellationStat[];
   performance: BusinessPerformance;
 }
+
+export interface AiBusinessInsightResponse {
+  executiveSummary: string;
+  financialInsight: { trend: string; analysis: string };
+  salesAndProduct: { topPerformersAnalysis: string; crossSellOpportunities: string };
+  customerService: { satisfactionAnalysis: string; cancellationInsights: string };
+  riskAlerts: { severity: string; issue: string; recommendation: string }[];
+  actionableAdvices: { title: string; detail: string; expectedImpact: string }[];
+}

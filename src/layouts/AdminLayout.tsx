@@ -12,6 +12,8 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext'; 
 
+import { ADMIN_ROUTES } from '../constants/routes';
+
 const { Header, Sider, Content } = Layout;
 
 const AdminLayout: React.FC = () => {
@@ -25,21 +27,20 @@ const AdminLayout: React.FC = () => {
     const adminUser = user || { name: 'Admin', avatar: '' };
 
     const handleLogout = () => {
-        // Hàm logout này trong AuthProvider sẽ lo dọn dẹp state và gọi adminAuthService.logout() để điều hướng
         logout();
     };
 
     const menuItems = [
-        { key: '/admin', icon: <DashboardOutlined />, label: 'Tổng quan' },
+        { key: ADMIN_ROUTES.ADMIN_ROOT, icon: <DashboardOutlined />, label: 'Tổng quan' },
         
         {
             key: 'sales',
             icon: <ShoppingCartOutlined />,
             label: 'Quản lý Bán hàng',
             children: [
-                { key: '/admin/orders', label: 'Đơn hàng (Orders)' },  
-                { key: '/admin/payments', label: 'Giao dịch (Payments)' }, 
-                { key: '/admin/vouchers', label: 'Mã giảm giá (Vouchers)' } 
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.ORDERS}`, label: 'Đơn hàng (Orders)' },  
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.PAYMENTS}`, label: 'Giao dịch (Payments)' }, 
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.VOUCHERS}`, label: 'Mã giảm giá (Vouchers)' } 
             ]
         },
 
@@ -48,12 +49,12 @@ const AdminLayout: React.FC = () => {
             icon: <AppstoreOutlined />,
             label: 'Quản lý Sản phẩm',
             children: [
-                { key: '/admin/products', label: 'Sản phẩm chính' }, 
-                { key: '/admin/accessories', label: 'Phụ kiện' },
-                { key: '/admin/combos', label: 'Combo Mua kèm' },    
-                { key: '/admin/categories', label: 'Danh mục (Categories)' },
-                { key: '/admin/brands', label: 'Thương hiệu (Brands)' },    
-                { key: '/admin/specs', label: 'Thuộc tính (Specs)' }        
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.PRODUCTS}`, label: 'Sản phẩm chính' }, 
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.ACCESSORIES}`, label: 'Phụ kiện' },
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.COMBOS}`, label: 'Combo Mua kèm' },    
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.CATEGORIES}`, label: 'Danh mục (Categories)' },
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.BRANDS}`, label: 'Thương hiệu (Brands)' },    
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.SPECS}`, label: 'Thuộc tính (Specs)' }        
             ]
         },
 
@@ -62,8 +63,8 @@ const AdminLayout: React.FC = () => {
             icon: <UserOutlined />,
             label: 'Quản lý Khách hàng',
             children: [
-                { key: '/admin/users', label: 'Tài khoản' },                
-                { key: '/admin/reviews', label: 'Đánh giá & Bình luận' }   
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.USERS}`, label: 'Tài khoản' },                
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.REVIEWS}`, label: 'Đánh giá & Bình luận' }   
             ]
         },
 
@@ -72,17 +73,17 @@ const AdminLayout: React.FC = () => {
             icon: <MessageOutlined />,
             label: 'Chăm sóc & Hỗ trợ',
             children: [
-                { key: '/admin/chat', icon: <MessageOutlined />, label: 'Live Chat' },       
+                { key: `${ADMIN_ROUTES.ADMIN_ROOT}/${ADMIN_ROUTES.CHAT}`, icon: <MessageOutlined />, label: 'Live Chat' },      
             ] 
         },
     ];
 
     const defaultOpenKeys = ['sales', 'catalog', 'customers', 'support'].filter(key => 
         location.pathname.includes(key) || 
-        (key === 'catalog' && (location.pathname.includes('products') || location.pathname.includes('categories') || location.pathname.includes('brands') || location.pathname.includes('specs'))) ||
-        (key === 'sales' && (location.pathname.includes('orders') || location.pathname.includes('vouchers'))) ||
-        (key === 'customers' && (location.pathname.includes('users') || location.pathname.includes('reviews'))) ||
-        (key === 'support' && (location.pathname.includes('chat') || location.pathname.includes('chatbot') || location.pathname.includes('notifications')))
+        (key === 'catalog' && (location.pathname.includes(ADMIN_ROUTES.PRODUCTS) || location.pathname.includes(ADMIN_ROUTES.CATEGORIES) || location.pathname.includes(ADMIN_ROUTES.BRANDS) || location.pathname.includes(ADMIN_ROUTES.SPECS))) ||
+        (key === 'sales' && (location.pathname.includes(ADMIN_ROUTES.ORDERS) || location.pathname.includes(ADMIN_ROUTES.VOUCHERS))) ||
+        (key === 'customers' && (location.pathname.includes(ADMIN_ROUTES.USERS) || location.pathname.includes(ADMIN_ROUTES.REVIEWS))) ||
+        (key === 'support' && location.pathname.includes(ADMIN_ROUTES.CHAT))
     );
 
     return (
@@ -151,7 +152,6 @@ const AdminLayout: React.FC = () => {
                         background: colorBgContainer, borderRadius: borderRadiusLG,
                         overflowY: 'auto' 
                     }}>
-                        {/* Đây là nơi các trang con (Dashboard, Quản lý SP) được render */}
                         <Outlet />
                     </div>
                 </Content>

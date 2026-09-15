@@ -1,4 +1,4 @@
-import { ApiResponse } from '../../types/admin.types';
+import { ApiResponse } from '../../types/common.types';
 
 export interface IAdminDashboardService {
     getDashboard(params?: { time?: string; startDate?: string; endDate?: string }): Promise<ApiResponse<any>>;

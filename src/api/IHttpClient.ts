@@ -2,6 +2,7 @@ export interface RequestConfig {
     params?: any;
     headers?: Record<string, string>;
     paramsSerializer?: (params: any) => string;
+    responseType?: 'json' | 'blob' | 'text' | 'arraybuffer';
 }
 
 export interface IHttpClient {
