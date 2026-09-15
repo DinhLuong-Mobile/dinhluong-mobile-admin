@@ -1,112 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { 
     Table, Tag, Space, Typography, Input, 
-    Select, Switch, message, Avatar, Card, Tooltip, 
-    Button, Drawer, Descriptions, Row, Col, Statistic, Divider, List,Upload,Modal
+    Select, Switch, Tooltip, Avatar, Card, 
+    Button, Drawer, Descriptions, Row, Col, Statistic, Divider, List
 } from 'antd';
-import { UploadOutlined,
+import { 
     UserOutlined, GoogleOutlined, FacebookOutlined, EyeOutlined, 
     ShoppingCartOutlined, DollarOutlined, CloseCircleOutlined, CheckCircleOutlined 
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-// 🔥 IMPORT SERVICE ĐÃ TÁCH
-import { 
-    userService, 
-    type UserResponse, 
-    type UserDetailResponse, 
-    type UserStatsResponse 
-} from '../../../services/userService'; // <-- Điều chỉnh đường dẫn cho đúng dự án của bạn
+import { useUserManager } from './useUserManager';
+import type { UserResponse, UserAddress } from '../../../types/user.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+};
+
 const UserManager: React.FC = () => {
-    // --- STATES ---
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [importReport, setImportReport] = useState<any>(null);
-    const [filterStatus, setFilterStatus] = useState<string>('ALL');
-    const [searchText, setSearchText] = useState<string>('');
 
-    const [stats, setStats] = useState<UserStatsResponse>({ totalUsers: 0, activeUsers: 0, lockedUsers: 0 });
-
-    const [detailVisible, setDetailVisible] = useState<boolean>(false);
-    const [userDetail, setUserDetail] = useState<UserDetailResponse | null>(null);
-    const [detailLoading, setDetailLoading] = useState<boolean>(false);
-
-    // --- HANDLERS DÙNG SERVICE TÁCH RIÊNG ---
-    const fetchUsersData = async () => {
-        setLoading(true);
-        try {
-            const data = await userService.getUsers(searchText, filterStatus);
-            setUsers(data);
-        } catch (error: any) {
-            message.error(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchUserStats = async () => {
-        try {
-            const data = await userService.getUserStats();
-            setStats(data);
-        } catch (error) {
-            console.error("Lỗi thống kê", error);
-        }
-    };
+    const {
+        users, loading, stats,
+        filterStatus, setFilterStatus, setSearchText,
+        detailVisible, setDetailVisible,
+        userDetail, detailLoading,
+        fetchUsers, fetchStats, fetchUserDetail,
+        toggleStatus, exportExcel
+    } = useUserManager();
 
     useEffect(() => {
-        fetchUsersData();
-        fetchUserStats();
-    }, [filterStatus, searchText]);
+        fetchUsers();
+        fetchStats();
+    }, [fetchUsers, fetchStats]);
 
-    const handleFetchDetail = async (userId: number) => {
-        setDetailVisible(true);
-        setDetailLoading(true);
-        setUserDetail(null);
-        try {
-            const data = await userService.getUserDetail(userId);
-            setUserDetail(data);
-        } catch (error: any) {
-            message.error(error.message || "Không thể lấy chi tiết");
-            setDetailVisible(false);
-        } finally {
-            setDetailLoading(false);
-        }
-    };
-
-    const handleToggleStatus = async (userId: number, checked: boolean) => {
-        try {
-            const successMsg = await userService.toggleUserStatus(userId);
-            message.success(checked ? "Đã mở khóa tài khoản!" : "Đã khóa tài khoản!");
-            setUsers(prev => prev.map(u => u.id === userId ? { ...u, isEnabled: checked } : u));
-            fetchUserStats(); // Cập nhật lại số lượng trên Dashboard
-        } catch (error: any) {
-            message.error(error.message || "Lỗi cập nhật trạng thái");
-        }
-    };
-    const handleExportExcel = async () => {
-        try {
-            message.loading({ content: 'Đang chuẩn bị file...', key: 'exporting' });
-            const blob = await userService.exportExcel(searchText, filterStatus);
-            
-            // Tạo link tải file
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `KhachHang_DLMStore_${dayjs().format('DDMMYYYY')}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            
-            message.success({ content: 'Xuất file thành công!', key: 'exporting' });
-        } catch (error: any) {
-            message.error({ content: error.message || 'Lỗi khi xuất file', key: 'exporting' });
-        }
-    };
-    // --- CẤU HÌNH COLUMNS (Giữ nguyên như cũ của bạn) ---
+    // --- CẤU HÌNH CỘT CHO BẢNG ---
     const columns = [
         { title: 'ID', dataIndex: 'id', width: 60, render: (text: number) => <Text type="secondary">#{text}</Text> },
         { 
@@ -138,7 +68,7 @@ const UserManager: React.FC = () => {
                 <Tooltip title={record.isEnabled ? "Khóa tài khoản này" : "Mở khóa tài khoản"}>
                     <Switch 
                         checked={record.isEnabled} 
-                        onChange={(checked) => handleToggleStatus(record.id, checked)}
+                        onChange={(checked) => toggleStatus(record.id, checked)}
                         checkedChildren="Hoạt động"
                         unCheckedChildren="Đã khóa"
                         disabled={record.roleName === 'ADMIN'}
@@ -151,7 +81,7 @@ const UserManager: React.FC = () => {
             align: 'center' as const,
             render: (_: any, record: UserResponse) => (
                 <Tooltip title="Xem chi tiết">
-                    <Button type="primary" shape="circle" icon={<EyeOutlined />} onClick={() => handleFetchDetail(record.id)} />
+                    <Button type="primary" shape="circle" icon={<EyeOutlined />} onClick={() => fetchUserDetail(record.id)} />
                 </Tooltip>
             )
         }
@@ -160,35 +90,34 @@ const UserManager: React.FC = () => {
     const orderColumns = [
         { title: 'Mã ĐH', dataIndex: 'id', render: (id: number) => `#${id}` },
         { title: 'Ngày đặt', dataIndex: 'createdAt', render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm') },
-        { title: 'Tổng tiền', dataIndex: 'totalAmount', render: (amount: number) => `${amount.toLocaleString()} đ` },
+        { title: 'Tổng tiền', dataIndex: 'totalAmount', render: (amount: number) => <Text strong type="danger">{formatCurrency(amount)}</Text> },
         { title: 'Trạng thái', dataIndex: 'status', render: (status: string) => <Tag color="blue">{status}</Tag> }
     ];
 
-    // --- RENDER GIAO DIỆN ---
     return (
         <div style={{ padding: 24, background: '#fff', borderRadius: 8 }}>
             <Title level={4} style={{ margin: '0 0 20px 0' }}>Quản lý Tài khoản Khách hàng</Title>
 
             {/* --- DASHBOARD THỐNG KÊ --- */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={8} style={{ display: 'flex' }}>
-                    <Card hoverable size="small" style={{ width: '100%', background: '#f0f5ff', borderLeft: '4px solid #2f54eb' }}>
+                <Col xs={24} sm={8}>
+                    <Card hoverable size="small" style={{ background: '#f0f5ff', borderLeft: '4px solid #2f54eb' }}>
                         <Statistic title="Tổng khách hàng" value={stats.totalUsers} prefix={<UserOutlined />} valueStyle={{ color: '#2f54eb', fontWeight: 'bold' }} />
                     </Card>
                 </Col>
-                <Col xs={24} sm={8} style={{ display: 'flex' }}>
-                    <Card hoverable size="small" style={{ width: '100%', background: '#f6ffed', borderLeft: '4px solid #52c41a' }}>
+                <Col xs={24} sm={8}>
+                    <Card hoverable size="small" style={{ background: '#f6ffed', borderLeft: '4px solid #52c41a' }}>
                         <Statistic title="Đang hoạt động" value={stats.activeUsers} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#52c41a', fontWeight: 'bold' }} />
                     </Card>
                 </Col>
-                <Col xs={24} sm={8} style={{ display: 'flex' }}>
-                    <Card hoverable size="small" style={{ width: '100%', background: '#fff1f0', borderLeft: '4px solid #f5222d' }}>
+                <Col xs={24} sm={8}>
+                    <Card hoverable size="small" style={{ background: '#fff1f0', borderLeft: '4px solid #f5222d' }}>
                         <Statistic title="Tài khoản bị khóa" value={stats.lockedUsers} prefix={<CloseCircleOutlined />} valueStyle={{ color: '#f5222d', fontWeight: 'bold' }} />
                     </Card>
                 </Col>
             </Row>
 
-            {/* --- TOOLBAR TÌM KIẾM & XUẤT/NHẬP --- */}
+            {/* --- TOOLBAR --- */}
             <Card size="small" style={{ marginBottom: 20, background: '#fafafa' }}>
                 <Space wrap size="large" align="center">
                     <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -210,23 +139,17 @@ const UserManager: React.FC = () => {
                         </Select>
                     </div>
 
-                    {/* --- CỤM NÚT IMPORT VÀ EXPORT --- */}
-                   {/* --- CỤM NÚT IMPORT VÀ EXPORT --- */}
-                    <Space>
-                       
-
-                        <Button 
-                            type="primary" 
-                            style={{ backgroundColor: '#107c41', borderColor: '#107c41' }} 
-                            onClick={handleExportExcel}
-                        >
-                            Xuất Excel
-                        </Button>
-                    </Space>
+                    <Button 
+                        type="primary" 
+                        style={{ backgroundColor: '#107c41', borderColor: '#107c41' }} 
+                        onClick={exportExcel}
+                    >
+                        Xuất Excel
+                    </Button>
                 </Space>
             </Card>
 
-            {/* --- BẢNG DANH SÁCH --- */}
+            {/* --- BẢNG DỮ LIỆU --- */}
             <Table 
                 columns={columns} 
                 dataSource={users} 
@@ -253,7 +176,7 @@ const UserManager: React.FC = () => {
                             </Col>
                             <Col span={8}>
                                 <Card size="small" bordered={false} style={{ background: '#e6f7ff' }}>
-                                    <Statistic title="Tổng chi tiêu" value={userDetail.statistics?.totalSpent || 0} suffix="đ" prefix={<DollarOutlined />} />
+                                    <Statistic title="Tổng chi tiêu" value={userDetail.statistics?.totalSpent || 0} formatter={(value) => formatCurrency(Number(value))} prefix={<DollarOutlined />} />
                                 </Card>
                             </Col>
                             <Col span={8}>
@@ -278,7 +201,7 @@ const UserManager: React.FC = () => {
                         <List
                             size="small" bordered dataSource={userDetail.addresses}
                             locale={{ emptyText: 'Chưa có địa chỉ nào' }}
-                            renderItem={(item) => (
+                            renderItem={(item: UserAddress) => (
                                 <List.Item>
                                     <List.Item.Meta
                                         title={<Text strong>{item.receiverName} - {item.receiverPhone}</Text>}
@@ -297,10 +220,6 @@ const UserManager: React.FC = () => {
                     </>
                 )}
             </Drawer>
-
-               
-
-
         </div>
     );
 };

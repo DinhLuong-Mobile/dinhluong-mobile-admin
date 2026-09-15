@@ -8,7 +8,6 @@ export const useVoucherManager = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [saving, setSaving] = useState<boolean>(false);
 
-    // Dùng useCallback để tránh render lại function liên tục
     const fetchVouchers = useCallback(async (keyword: string = '') => {
         setLoading(true);
         try {

@@ -26,8 +26,8 @@ export interface UserDetailResponse {
   isEnabled: boolean;
   createdAt: string;
   statistics: UserStats;
-  addresses: any[];
-  recentOrders: any[];
+  addresses: UserAddress[];
+  recentOrders: UserRecentOrder[];
 }
 
 export interface UserDashboardStats {
@@ -46,4 +46,18 @@ export interface ImportUserReport {
   successCount: number;
   failCount: number;
   errors: UserImportError[];
+}
+
+export interface UserAddress {
+    id: number;
+    receiverName: string;
+    receiverPhone: string;
+    fullAddress: string;
+}
+
+export interface UserRecentOrder {
+    id: number;
+    totalAmount: number;
+    status: string;
+    createdAt: string;
 }
