@@ -1,139 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
     Table, Button, Space, Modal, Form, Input, 
-    Select, InputNumber, message, Popconfirm, Card, Typography, Tag, Divider 
+    Select, InputNumber, Popconfirm, Card, Typography, Tag, Divider 
 } from 'antd';
 import { 
     PlusOutlined, DeleteOutlined, SettingOutlined 
 } from '@ant-design/icons';
+import { useComboManager } from './useComboManager';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+
 const ComboManager: React.FC = () => {
-    // States cho dữ liệu chính
-    const [mainProducts, setMainProducts] = useState<any[]>([]);
-    const [accessories, setAccessories] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
+    const {
+        mainProducts,
+        accessories,
+        loading,
+        isModalOpen,
+        selectedMainProduct,
+        combos,
+        comboLoading,
+        form, 
+        openComboModal,
+        closeModal,
+        handleAddCombo,
+        handleDeleteCombo
+    } = useComboManager();
 
-    // States cho Modal Quản lý Combo
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedMainProduct, setSelectedMainProduct] = useState<any>(null);
-    const [combos, setCombos] = useState<any[]>([]);
-    const [comboLoading, setComboLoading] = useState(false);
-    const [form] = Form.useForm();
-
-    const getAuthToken = () => {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr).token : '';
-    };
-
-    // 1. FETCH DỮ LIỆU BAN ĐẦU (Main Products & Accessories)
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const headers = { 'Authorization': `Bearer ${getAuthToken()}` };
-            // Lấy riêng SP chính và Phụ kiện (Giả sử bạn có truyền param type lên API)
-            const [mainRes, accRes] = await Promise.all([
-                fetch('http://localhost:8080/api/admin/products?productType=MAIN&size=100', { headers }),
-                fetch('http://localhost:8080/api/admin/products?productType=ACCESSORY&size=500', { headers })
-            ]);
-
-            if (mainRes.ok) {
-                const json = await mainRes.json();
-                // Tùy theo cấu trúc API của bạn (thường là json.data.content nếu có phân trang)
-                setMainProducts(json.data?.content || json.data || []);
-            }
-            if (accRes.ok) {
-                const json = await accRes.json();
-                setAccessories(json.data?.content || json.data || []);
-            }
-        } catch (error) {
-            message.error("Lỗi tải dữ liệu sản phẩm");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    // 2. MỞ MODAL & LẤY DANH SÁCH COMBO CỦA SP ĐƯỢC CHỌN
-    const openComboModal = async (product: any) => {
-        setSelectedMainProduct(product);
-        setIsModalOpen(true);
-        form.resetFields();
-        fetchCombosForProduct(product.id);
-    };
-
-    const fetchCombosForProduct = async (mainProductId: number) => {
-        setComboLoading(true);
-        try {
-            // Cần API backend lấy combo theo ID sản phẩm chính
-            const res = await fetch(`http://localhost:8080/api/admin/product-combos/main/${mainProductId}`, {
-                headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setCombos(data);
-            }
-        } catch (error) {
-            message.error("Lỗi tải danh sách combo");
-        } finally {
-            setComboLoading(false);
-        }
-    };
-
-    // 3. THÊM COMBO MỚI
-    const handleAddCombo = async (values: any) => {
-        try {
-            const payload = {
-                mainProductId: selectedMainProduct.id,
-                relatedProductId: values.relatedProductId,
-                discountAmount: values.discountAmount,
-                note: values.note
-            };
-
-            const res = await fetch('http://localhost:8080/api/admin/product-combos', {
-                method: 'POST',
-                headers: { 
-                    'Authorization': `Bearer ${getAuthToken()}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                message.success("Thêm combo thành công!");
-                form.resetFields(); // Clear form
-                fetchCombosForProduct(selectedMainProduct.id); // Load lại bảng combo
-            } else {
-                message.error("Lỗi khi thêm combo");
-            }
-        } catch (error) {
-            message.error("Lỗi kết nối");
-        }
-    };
-
-    // 4. XÓA COMBO
-    const handleDeleteCombo = async (comboId: number) => {
-        try {
-            const res = await fetch(`http://localhost:8080/api/admin/product-combos/${comboId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-            });
-            if (res.ok) {
-                message.success("Đã xóa combo");
-                fetchCombosForProduct(selectedMainProduct.id);
-            }
-        } catch (error) {
-            message.error("Lỗi khi xóa combo");
-        }
-    };
-
-    // ================== CẤU HÌNH BẢNG ==================
-    const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
     const mainColumns = [
         {
@@ -142,7 +37,7 @@ const ComboManager: React.FC = () => {
             key: 'name',
             render: (text: string, record: any) => (
                 <Space>
-                    <img src={record.thumbnailUrl} alt={text} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                    <img src={record.thumbnailUrl || record.image} alt={text} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
                     <div>
                         <Text strong>{text}</Text><br/>
                         <Text type="secondary" style={{ fontSize: 12 }}>{record.sku || `ID: ${record.id}`}</Text>
@@ -150,7 +45,7 @@ const ComboManager: React.FC = () => {
                 </Space>
             )
         },
-        { title: 'Giá bán', dataIndex: 'displayPrice', key: 'price', render: (p: number) => formatPrice(p) },
+        { title: 'Giá bán', dataIndex: 'displayPrice', key: 'price', render: (p: number) => formatPrice(p || 0) },
         { title: 'Tồn kho', dataIndex: 'totalStock', key: 'stock' },
         {
             title: 'Hành động',
@@ -163,36 +58,35 @@ const ComboManager: React.FC = () => {
         },
     ];
 
+    // ================== CẤU HÌNH BẢNG COMBO ==================
     const comboColumns = [
         { 
             title: 'Phụ kiện kèm theo', 
             key: 'accName', 
-            render: (_: any, record: any) => (
-                <Space>
-                    {/* 👇 HIỂN THỊ ẢNH Ở ĐÂY 👇 */}
-                    {record.relatedProductThumbnail ? (
-                        <img 
-                            src={record.relatedProductThumbnail} 
-                            alt={record.relatedProductName} 
-                            style={{ width: 40, height: 40, objectFit: 'contain', border: '1px solid #f0f0f0', borderRadius: 4, background: '#fff' }} 
-                        />
-                    ) : (
-                        <div style={{ width: 40, height: 40, background: '#f0f0f0', borderRadius: 4 }} />
-                    )}
-                    <Text strong>{record.relatedProductName}</Text>
-                </Space>
-            )
-        },
-        { 
-            title: 'Phụ kiện kèm theo', 
-            key: 'accName', 
-            render: (_: any, record: any) => <Text strong>{record.relatedProduct?.name}</Text> 
+            render: (_: any, record: any) => {
+                const thumbnail = record.relatedProductThumbnail;
+                const name = record.relatedProductName;
+                return (
+                    <Space>
+                        {thumbnail ? (
+                            <img 
+                                src={thumbnail} 
+                                alt={name} 
+                                style={{ width: 40, height: 40, objectFit: 'contain', border: '1px solid #f0f0f0', borderRadius: 4, background: '#fff' }} 
+                            />
+                        ) : (
+                            <div style={{ width: 40, height: 40, background: '#f0f0f0', borderRadius: 4 }} />
+                        )}
+                        <Text strong>{name}</Text>
+                    </Space>
+                );
+            }
         },
         { 
             title: 'Giảm giá', 
             dataIndex: 'discountAmount', 
             key: 'discount',
-            render: (p: number) => <Tag color="green">-{formatPrice(p)}</Tag>
+            render: (p: number) => <Tag color="green">-{formatPrice(p || 0)}</Tag>
         },
         { title: 'Ghi chú', dataIndex: 'note', key: 'note' },
         {
@@ -228,14 +122,15 @@ const ComboManager: React.FC = () => {
             <Modal 
                 title={<>Combos cho: <Text type="danger">{selectedMainProduct?.name}</Text></>}
                 open={isModalOpen} 
-                onCancel={() => setIsModalOpen(false)}
-                footer={null} // Không dùng footer mặc định
+                onCancel={closeModal}
+                footer={null} 
                 width={800}
                 destroyOnHidden
             >
                 {/* Khu vực 1: Form thêm Combo mới */}
                 <div style={{ background: '#fafafa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
                     <Title level={5} style={{ marginTop: 0 }}>Thêm Phụ Kiện Vào Combo</Title>
+                    
                     <Form form={form} layout="vertical" onFinish={handleAddCombo}>
                         <Form.Item name="relatedProductId" label="Chọn Phụ kiện" rules={[{ required: true, message: 'Chọn phụ kiện!' }]}>
                             <Select 
@@ -246,7 +141,7 @@ const ComboManager: React.FC = () => {
                             >
                                 {accessories.map(acc => (
                                     <Option key={acc.id} value={acc.id}>
-                                        {acc.name} - Giá gốc: {formatPrice(acc.displayPrice)}
+                                        {acc.name} - Giá gốc: {formatPrice(acc.displayPrice || 0)}
                                     </Option>
                                 ))}
                             </Select>
@@ -285,4 +180,4 @@ const ComboManager: React.FC = () => {
     );
 };
 
-export default ComboManager;
+export default ComboManager;    
