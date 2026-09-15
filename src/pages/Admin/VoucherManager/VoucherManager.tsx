@@ -1,124 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Table, Button, Space, Typography, Input, Tag, 
-    message, Popconfirm, Tooltip, Modal, Form, Select, InputNumber, DatePicker 
+    Popconfirm, Tooltip, Modal, Form, Select, InputNumber, DatePicker 
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
+import { useVoucherManager } from './useVoucherManager';
+import type { Voucher } from '../../../types/voucher.types';
+
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-interface VoucherResponse {
-    id: number;
-    code: string;
-    discount: number;
-    discountType: 'PERCENT' | 'FIXED';
-    minOrderAmount: number;
-    usageLimit: number;
-    usedCount: number;
-    expiryDate: string;
-}
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
 const VoucherManager: React.FC = () => {
-    const [vouchers, setVouchers] = useState<VoucherResponse[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
+    const { vouchers, loading, saving, fetchVouchers, saveVoucher, deleteVoucher } = useVoucherManager();
     const [searchText, setSearchText] = useState<string>('');
 
-    // Modal States
+    // Modal UI States
     const [isModalVisible, setIsModalVisible] = useState(false);
-    const [editingVoucher, setEditingVoucher] = useState<VoucherResponse | null>(null);
+    const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
     const [form] = Form.useForm();
-    const [saving, setSaving] = useState(false);
 
-    const getAuthToken = () => {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr).token : '';
-    };
+    useEffect(() => {
+        fetchVouchers();
+    }, [fetchVouchers]);
 
-    // --- FETCH DATA ---
-    const fetchVouchers = async (keyword = '') => {
-        setLoading(true);
-        try {
-            const token = getAuthToken();
-            const response = await fetch(`http://localhost:8080/api/admin/vouchers?keyword=${keyword}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const json = await response.json();
-            if (response.ok && json.status === 'success') {
-                setVouchers(json.data);
-            } else { message.error(json.message); }
-        } catch (error) { message.error("Lỗi khi tải dữ liệu"); } finally { setLoading(false); }
-    };
-
-    useEffect(() => { fetchVouchers(); }, []);
-
-    // --- THÊM / SỬA (MỞ MODAL) ---
-    const openModal = (voucher: VoucherResponse | null = null) => {
+    // --- XỬ LÝ MỞ MODAL ---
+    const openModal = (voucher: Voucher | null = null) => {
         setEditingVoucher(voucher);
         if (voucher) {
-            // Đẩy dữ liệu cũ vào Form
             form.setFieldsValue({
                 ...voucher,
                 expiryDate: dayjs(voucher.expiryDate)
             });
         } else {
             form.resetFields();
-            form.setFieldsValue({ discountType: 'FIXED', usedCount: 0 }); // Giá trị mặc định
+            form.setFieldsValue({ discountType: 'FIXED', usedCount: 0 });
         }
         setIsModalVisible(true);
     };
 
+    // --- XỬ LÝ LƯU (SUBMIT FORM) ---
     const handleModalOk = async () => {
         try {
             const values = await form.validateFields();
-            setSaving(true);
             
-            // Format ngày giờ gửi xuống BE
             const payload = {
                 ...values,
                 expiryDate: values.expiryDate.format('YYYY-MM-DDTHH:mm:ss')
             };
 
-            const token = getAuthToken();
-            const url = editingVoucher 
-                ? `http://localhost:8080/api/admin/vouchers/${editingVoucher.id}` 
-                : `http://localhost:8080/api/admin/vouchers`;
-            const method = editingVoucher ? 'PUT' : 'POST';
-
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const json = await response.json();
-            if (response.ok && json.status === 'success') {
-                message.success(editingVoucher ? 'Cập nhật thành công!' : 'Thêm mới thành công!');
+            const isSuccess = await saveVoucher(editingVoucher?.id || null, payload);
+            
+            if (isSuccess) {
                 setIsModalVisible(false);
-                fetchVouchers(searchText); // Reload danh sách
-            } else { message.error(json.message); }
-        } catch (error) { console.log('Validate Failed:', error); } finally { setSaving(false); }
+                fetchVouchers(searchText); // Reload lại danh sách sau khi lưu
+            }
+        } catch (error) {
+            console.log('Validate Failed:', error);
+        }
     };
 
-    // --- XÓA ---
     const handleDelete = async (id: number) => {
-        try {
-            const token = getAuthToken();
-            const response = await fetch(`http://localhost:8080/api/admin/vouchers/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const json = await response.json();
-            if (response.ok && json.status === 'success') {
-                message.success("Xóa thành công!");
-                fetchVouchers(searchText);
-            } else { message.error(json.message); }
-        } catch (error) { message.error("Lỗi kết nối"); }
+        const isSuccess = await deleteVoucher(id);
+        if (isSuccess) {
+            fetchVouchers(searchText);
+        }
     };
 
     // --- CỘT BẢNG ---
@@ -126,7 +77,7 @@ const VoucherManager: React.FC = () => {
         { title: 'Mã Code', dataIndex: 'code', key: 'code', render: (text: string) => <Tag color="blue" style={{ fontSize: 14, padding: '4px 8px' }}>{text}</Tag> },
         { 
             title: 'Mức giảm', key: 'discount', 
-            render: (_: any, record: VoucherResponse) => (
+            render: (_: any, record: Voucher) => (
                 <Text strong type="danger">
                     {record.discountType === 'PERCENT' ? `${record.discount}%` : formatCurrency(record.discount)}
                 </Text>
@@ -135,7 +86,7 @@ const VoucherManager: React.FC = () => {
         { title: 'Đơn tối thiểu', dataIndex: 'minOrderAmount', key: 'minOrderAmount', render: (amount: number) => <Text>{formatCurrency(amount)}</Text> },
         { 
             title: 'Đã dùng / Tổng', key: 'usage', align: 'center' as const,
-            render: (_: any, record: VoucherResponse) => {
+            render: (_: any, record: Voucher) => {
                 const isFull = record.usedCount >= record.usageLimit;
                 return (
                     <Tag color={isFull ? 'red' : 'green'}>
@@ -153,7 +104,7 @@ const VoucherManager: React.FC = () => {
         },
         { 
             title: 'Thao tác', key: 'action', 
-            render: (_: any, record: VoucherResponse) => (
+            render: (_: any, record: Voucher) => (
                 <Space>
                     <Tooltip title="Sửa"><Button size="small" icon={<EditOutlined style={{color: '#1890ff'}}/>} onClick={() => openModal(record)} /></Tooltip>
                     <Popconfirm title="Bạn có chắc muốn xóa mã này?" onConfirm={() => handleDelete(record.id)} okText="Xóa" cancelText="Hủy">
