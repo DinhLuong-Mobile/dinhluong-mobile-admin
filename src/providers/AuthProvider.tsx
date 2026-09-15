@@ -9,7 +9,6 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
- 
     const [user, setUser] = useState<User | null>(() => {
         const storedData = adminAuthStorage.getUser();
         return storedData?.user || null; 
@@ -20,8 +19,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     const logout = () => {
-        setUser(null);
         adminAuthService.logout(); 
+        setUser(null);
     };
 
     const isLogin = !!user;

@@ -9,14 +9,15 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface AuthData {
+// 1. Gom chung thành 1 Interface User duy nhất và đầy đủ
+export interface User {
   id: number;
   name: string;
   email: string;
   avatar?: string;
-  typeAccount: string;
+  typeAccount?: string;
   token: string;
-  role?: string; // Bổ sung dòng này
+  role?: string; 
 }
 
 export interface ApiResponse<T> {
@@ -26,9 +27,6 @@ export interface ApiResponse<T> {
   timestamp: string;
   data: T;
 }
-export interface User {
-  name: string;
-  token?: string;
-}
 
-export type LoginResponse = ApiResponse<AuthData>;
+// 2. LoginResponse bây giờ bọc kiểu User
+export type LoginResponse = ApiResponse<User>;

@@ -1,5 +1,5 @@
 import { Navigate, useRoutes } from "react-router-dom";
-
+import { ADMIN_ROUTES } from "../constants/routes";
 
 import AdminProtectedRoute from "./AdminProtectedRoute";
 import AdminLayout from "../layouts/AdminLayout";
@@ -21,64 +21,61 @@ import SpecManager from "../pages/Admin/SpecManager/SpecManager";
 import ComboManager from "../pages/Admin/ComboManager/ComboManager";
 import AdminLogin from "../pages/AdminLogin";
 
-
 export default function useRouteElements() {
     const routeElements = useRoutes([
-        
         {
-            path: '/',
-            element: <Navigate to="/admin" replace />
+            path: ADMIN_ROUTES.ROOT,
+            element: <Navigate to={ADMIN_ROUTES.ADMIN_ROOT} replace />
         },
-
         {
-            path: '/admin/login',
+            path: ADMIN_ROUTES.LOGIN,
             element: <AdminLogin />
         },
         // ==========================================
         // CÁC ROUTE ADMIN
         // ==========================================
         {
-            path: '/admin',
+            path: ADMIN_ROUTES.ADMIN_ROOT,
             element: <AdminProtectedRoute />,
             children: [
                 {
                     element: <AdminLayout />,
                     children: [
                         { index: true, element: <Dashboard /> },
-                        { path: 'orders', element: <OrderManager /> },
-                        { path: 'payments', element: <PaymentManager /> }, 
-                        { path: 'vouchers', element: <VoucherManager /> },
+                        { path: ADMIN_ROUTES.ORDERS, element: <OrderManager /> },
+                        { path: ADMIN_ROUTES.PAYMENTS, element: <PaymentManager /> }, 
+                        { path: ADMIN_ROUTES.VOUCHERS, element: <VoucherManager /> },
                         {
-                            path: 'products',
+                            path: ADMIN_ROUTES.PRODUCTS,
                             element: <ProductManager defaultType="MAIN" /> 
                         },
                         {
-                            path: 'products/create',
+                            path: ADMIN_ROUTES.PRODUCTS_CREATE,
                             element: <ProductCreate /> 
                         },
                         {
-                            path: 'products/edit/:id',
+                            path: ADMIN_ROUTES.PRODUCTS_EDIT,
                             element: <ProductEdit /> 
                         },
                         {
-                            path: 'accessories',
+                            path: ADMIN_ROUTES.ACCESSORIES,
                             element: <ProductManager defaultType="ACCESSORY" /> 
                         },
                         {
-                            path: 'accessories/create',
+                            path: ADMIN_ROUTES.ACCESSORIES_CREATE,
                             element: <AccessoryCreate /> 
                         },
                         {
-                            path: 'accessories/edit/:id',
+                            path: ADMIN_ROUTES.ACCESSORIES_EDIT,
                             element: <AccessoryEdit /> 
                         },
-                        { path: 'combos', element: <ComboManager /> }, 
-                        { path: 'categories', element: <CategoryManager /> }, 
-                        { path: 'brands', element: <BrandManager /> }, 
-                        { path: 'specs', element: <SpecManager /> }, 
-                        { path: 'users', element: <UserManager /> },
-                        { path: 'reviews', element: <ReviewManager /> },
-                        { path: 'chat', element: <LiveChatAdmin /> },
+                        { path: ADMIN_ROUTES.COMBOS, element: <ComboManager /> }, 
+                        { path: ADMIN_ROUTES.CATEGORIES, element: <CategoryManager /> }, 
+                        { path: ADMIN_ROUTES.BRANDS, element: <BrandManager /> }, 
+                        { path: ADMIN_ROUTES.SPECS, element: <SpecManager /> }, 
+                        { path: ADMIN_ROUTES.USERS, element: <UserManager /> },
+                        { path: ADMIN_ROUTES.REVIEWS, element: <ReviewManager /> },
+                        { path: ADMIN_ROUTES.CHAT, element: <LiveChatAdmin /> },
                     ]
                 }
             ]

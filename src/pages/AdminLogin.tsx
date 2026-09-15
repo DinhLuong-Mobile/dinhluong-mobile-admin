@@ -1,56 +1,44 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { message } from 'antd'; // Nếu bạn muốn dùng thông báo của antd ở đây
+import { useAuth } from '../contexts/AuthContext';
+import { adminAuthService } from '../services'; 
+import { ADMIN_ROUTES } from '../constants/routes';
 import './AdminLogin.css';
-
-// Định nghĩa kiểu dữ liệu cho Response trả về từ API
-interface LoginResponse {
-    message?: string;
-    data?: {
-        token: string;
-    };
-}
 
 const AdminLogin: React.FC = () => {
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
-
-    // 1. KHỞI TẠO NAVIGATE Ở ĐÂY
     const navigate = useNavigate(); 
+    const { login } = useAuth(); 
 
     const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
-        // Reset lỗi và bật trạng thái loading
         setErrorMessage('');
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/auth/admin-login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = (await response.json()) as LoginResponse;
-
-            if (response.ok && data.data && data.data.token) {
-                const token = data.data.token;
-                
-                // 2. CHUYỂN HƯỚNG KÈM TOKEN LÊN URL
-                // Trả lại cách này để file AdminProtectedRoute tự lấy token, giải mã và set Role
-                navigate(`/admin?token=${token}`);
+            const response = await adminAuthService.login({ email, password });
+            if (response && response.code === 200 && response.data) {
+                login({
+                    id: response.data.id,
+                    email: response.data.email,
+                    name: response.data.name,
+                    avatar: response.data.avatar,
+                    typeAccount: response.data.typeAccount,
+                    token: response.data.token,
+                    role: response.data.role || 'ADMIN'         
+                });
+                navigate(ADMIN_ROUTES.ADMIN_ROOT);
                 
             } else {
-                setErrorMessage(data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
+                setErrorMessage(response?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Lỗi kết nối:', error);
-            setErrorMessage('Lỗi kết nối máy chủ. Vui lòng thử lại sau.');
+            setErrorMessage(error?.message || 'Lỗi kết nối máy chủ. Vui lòng thử lại sau.');
         } finally {
             setIsLoading(false);
         }
@@ -59,7 +47,7 @@ const AdminLogin: React.FC = () => {
     return (
         <div className="admin-login-page">
             <div className="login-wrapper">
-                {/* Cột Trái: Branding Gradient đỏ */}
+                {/* Cột Trái: Branding Gradient đỏ (Giữ nguyên UI của bạn) */}
                 <div className="branding-side">
                     <div className="brand-logo">
                         DLM<span>Store</span>
@@ -90,6 +78,7 @@ const AdminLogin: React.FC = () => {
                     )}
 
                     <form onSubmit={handleLogin}>
+                        {/* Các input giữ nguyên như cũ... */}
                         <div className="input-group">
                             <label htmlFor="email">Tài khoản Email</label>
                             <div className="input-wrapper">

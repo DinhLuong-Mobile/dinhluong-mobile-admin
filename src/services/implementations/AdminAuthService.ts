@@ -34,6 +34,5 @@ export class AdminAuthService implements IAdminAuthService {
 
     logout() {
         adminAuthStorage.removeUser();
-        window.location.href = '/admin/login';
     }
 }
