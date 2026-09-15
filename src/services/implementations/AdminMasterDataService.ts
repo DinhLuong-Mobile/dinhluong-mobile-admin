@@ -1,6 +1,7 @@
 import { IHttpClient } from '../../api/IHttpClient';
 import { API_CONFIG } from '../../config/api.config';
-import { IAdminMasterDataService, MasterDataRequest, SpecRequest } from '../interfaces/IAdminMasterDataService';
+import { IAdminMasterDataService, MasterDataRequest } from '../interfaces/IAdminMasterDataService';
+import type { SpecGroup, SpecGroupRequest, SpecAttribute, SpecAttributeRequest } from '../../types/spec.types';
 import type { ApiResponse } from '../../types/common.types';
 import type { Brand, BrandRequest } from '../../types/brand.types';
 
@@ -42,32 +43,32 @@ export class AdminMasterDataService implements IAdminMasterDataService {
     }
 
     // 3. Spec Groups
-    async getSpecGroups() {
-        return this.httpClient.get<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_GROUPS.BASE);
+   async getSpecGroups() {
+        return this.httpClient.get<ApiResponse<SpecGroup[]>>(API_CONFIG.ADMIN.SPEC_GROUPS.BASE);
     }
 
-    async createSpecGroup(data: SpecRequest) {
-        return this.httpClient.post<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_GROUPS.BASE, data);
+    async createSpecGroup(data: SpecGroupRequest) {
+        return this.httpClient.post<ApiResponse<SpecGroup>>(API_CONFIG.ADMIN.SPEC_GROUPS.BASE, data);
     }
 
-    async updateSpecGroup(id: number | string, data: SpecRequest) {
-        return this.httpClient.put<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_GROUPS.BY_ID(id), data);
+    async updateSpecGroup(id: number | string, data: SpecGroupRequest) {
+        return this.httpClient.put<ApiResponse<SpecGroup>>(API_CONFIG.ADMIN.SPEC_GROUPS.BY_ID(id), data);
     }
 
     async deleteSpecGroup(id: number | string) {
-        return this.httpClient.delete<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_GROUPS.BY_ID(id));
+        return this.httpClient.delete<ApiResponse<string>>(API_CONFIG.ADMIN.SPEC_GROUPS.BY_ID(id));
     }
 
-    // 4. Spec Attributes
-    async createSpecAttribute(data: SpecRequest) {
-        return this.httpClient.post<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BASE, data);
+    // --- SPEC ATTRIBUTES ---
+    async createSpecAttribute(data: SpecAttributeRequest) {
+        return this.httpClient.post<ApiResponse<SpecAttribute>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BASE, data);
     }
 
-    async updateSpecAttribute(id: number | string, data: SpecRequest) {
-        return this.httpClient.put<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BY_ID(id), data);
+    async updateSpecAttribute(id: number | string, data: SpecAttributeRequest) {
+        return this.httpClient.put<ApiResponse<SpecAttribute>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BY_ID(id), data);
     }
 
     async deleteSpecAttribute(id: number | string) {
-        return this.httpClient.delete<ApiResponse<any>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BY_ID(id));
+        return this.httpClient.delete<ApiResponse<string>>(API_CONFIG.ADMIN.SPEC_ATTRIBUTES.BY_ID(id));
     }
 }

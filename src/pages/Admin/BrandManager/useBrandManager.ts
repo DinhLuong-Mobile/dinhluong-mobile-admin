@@ -4,8 +4,6 @@ import { adminMasterDataService } from '../../../services';
 import type { Brand, BrandRequest } from '../../../types/brand.types';
 
 // Hàm tạo slug tự động
-
-
 export const generateSlug = (str: string): string => {
     if (!str) return '';
     return str.toString().toLowerCase()
