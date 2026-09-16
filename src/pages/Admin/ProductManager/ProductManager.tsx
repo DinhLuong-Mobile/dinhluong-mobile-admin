@@ -260,7 +260,7 @@ const   ProductManager: React.FC<ProductManagerProps> = ({ defaultType = 'MAIN' 
             <StockDetailModal
                 open={stockModalVisible}
                 onClose={() => setStockModalVisible(false)}
-                onSuccess={triggerRefresh} // Tự động load lại bảng khi cập nhật kho thành công
+                onSuccess={triggerRefresh} 
                 product={selectedProduct}
             />
         </div>

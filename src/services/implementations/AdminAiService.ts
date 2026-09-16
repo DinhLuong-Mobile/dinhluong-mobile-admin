@@ -6,7 +6,7 @@ import {
     AiSpecExtractRequest, 
     AiAccessoryRequest 
 } from '../interfaces/IAdminAiService';
-import type { ApiResponse } from '../../types/admin.types';
+import type { ApiResponse } from '../../types/common.types';
 
 export class AdminAiService implements IAdminAiService {
     constructor(private readonly httpClient: IHttpClient) {}

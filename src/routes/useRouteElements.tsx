@@ -55,7 +55,7 @@ export default function useRouteElements() {
                         },
                         {
                             path: ADMIN_ROUTES.PRODUCTS_EDIT,
-                            element: <ProductEdit /> 
+                            element: <ProductCreate /> 
                         },
                         {
                             path: ADMIN_ROUTES.ACCESSORIES,

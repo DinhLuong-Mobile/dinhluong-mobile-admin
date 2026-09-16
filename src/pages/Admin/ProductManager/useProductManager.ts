@@ -4,7 +4,6 @@ import { adminProductService } from '../../../services';
 import { adminMasterDataService } from '../../../services';
 import type { ProductResponse } from '../../../types/product.types';
 
-// Định nghĩa Type cho Filter (tránh dùng any)
 interface FilterOption {
     id: string | number;
     name: string;
@@ -30,27 +29,21 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
     const [stockModalVisible, setStockModalVisible] = useState<boolean>(false);
     const [selectedProduct, setSelectedProduct] = useState<{ id: number; name: string } | null>(null);
     
-    // State dùng để trigger reload data an toàn trong useEffect
     const [refreshKey, setRefreshKey] = useState<number>(0);
     const triggerRefresh = () => setRefreshKey(prev => prev + 1);
 
-    // =========================================================================
-    // EFFECT 1: FETCH BỘ LỌC (Chỉ chạy 1 lần khi mount)
-    // =========================================================================
+
     useEffect(() => {
         const loadFilters = async () => {
             try {
-                // Sửa lại đoạn hứng dữ liệu
                 const [catRes, brandRes] = await Promise.all([
                     adminMasterDataService.getCategories(),
                     adminMasterDataService.getBrands()
                 ]);
                 
-                // Trích xuất mảng data thực sự từ ApiResponse
                 const categoriesData = catRes.data || [];
                 const brandsData = brandRes.data || [];
                 
-                // Ép kiểu (hoặc map) để chắc chắn khớp với FilterOption[]
                 setCategories(categoriesData as unknown as FilterOption[]);
                 setBrands(brandsData as unknown as FilterOption[]);
             } catch (error: unknown) {
@@ -61,9 +54,6 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
         loadFilters();
     }, []);
 
-    // =========================================================================
-    // EFFECT 2: FETCH SẢN PHẨM (Chạy khi filter/page thay đổi hoặc triggerRefresh được gọi)
-    // =========================================================================
     useEffect(() => {
         const fetchProducts = async () => {
             setLoading(true);
@@ -79,17 +69,14 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
                     productType: defaultType
                 };
                 
-                // Gọi API
                 const response = await adminProductService.getProducts(params);
                 
-                // Xử lý dữ liệu trả về theo chuẩn ApiResponse<PageResponse<T>> của bạn
                 if (response.code === 200 || response.status === 'success') {
                     const pageData = response.data;
                     setProducts(pageData?.content || []);
                     setTotal(pageData?.totalElements || 0);
                 }
             } catch (error: unknown) {
-                // Xử lý lỗi chuẩn TS thay cho `any`
                 const err = error as Error;
                 message.error(err.message || 'Lỗi tải danh sách sản phẩm');
             } finally {
@@ -100,10 +87,7 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
         fetchProducts();
     }, [currentPage, pageSize, searchText, filterStatus, filterBrand, filterCategory, defaultType, refreshKey]);
 
-    // =========================================================================
     // CÁC HÀM XỬ LÝ SỰ KIỆN TỪ UI (HANDLERS)
-    // =========================================================================
-    
     const handlePageChange = (page: number, size: number) => {
         setCurrentPage(page);
         setPageSize(size);
@@ -123,7 +107,6 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
     const handleToggleFeatured = async (id: number) => {
         try {
             const response = await adminProductService.toggleFeatured(id);
-            // Cấu trúc response có thể chứa thông báo
             message.success(response.message || 'Cập nhật thành công');
             triggerRefresh();
         } catch (error: unknown) {
@@ -186,7 +169,6 @@ export const useProductManager = (defaultType: 'MAIN' | 'ACCESSORY' = 'MAIN') =>
             const res = await adminProductService.importExcel(formData) as any;
             hideLoading();
             
-            // Tùy theo chuẩn trả về của service mà parse data
             const importData = res.data || res;
 
             if (importData && importData.errors && importData.errors.length > 0) {
