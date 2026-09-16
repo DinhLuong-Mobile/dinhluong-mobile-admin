@@ -12,9 +12,7 @@ import UserManager from "../pages/Admin/UserManager/UserManager";
 import ReviewManager from "../pages/Admin/ReviewManager/ReviewManager";
 import LiveChatAdmin from "../pages/Admin/LiveChatAdmin/LiveChatAdmin";
 import ProductCreate from "../pages/Admin/ProductManager/ProductCreate/ProductCreate";
-import ProductEdit from "../pages/Admin/ProductManager/ProductEdit/ProductEdit";
-import AccessoryCreate from "../pages/Admin/ProductManager/AccessoryCreate/AccessoryCreate";
-import AccessoryEdit from "../pages/Admin/ProductManager/AccessoryEdit/AccessoryEdit";
+import AccessoryForm from "../pages/Admin/ProductManager/AccessoryForm/AccessoryForm";
 import CategoryManager from "../pages/Admin/CategoryManager/CategoryManager";
 import BrandManager from "../pages/Admin/BrandManager/BrandManager";
 import SpecManager from "../pages/Admin/SpecManager/SpecManager";
@@ -63,11 +61,11 @@ export default function useRouteElements() {
                         },
                         {
                             path: ADMIN_ROUTES.ACCESSORIES_CREATE,
-                            element: <AccessoryCreate /> 
+                            element: <AccessoryForm /> 
                         },
                         {
                             path: ADMIN_ROUTES.ACCESSORIES_EDIT,
-                            element: <AccessoryEdit /> 
+                            element: <AccessoryForm /> 
                         },
                         { path: ADMIN_ROUTES.COMBOS, element: <ComboManager /> }, 
                         { path: ADMIN_ROUTES.CATEGORIES, element: <CategoryManager /> }, 

@@ -2,7 +2,7 @@ import { IHttpClient } from '../../api/IHttpClient';
 import { API_CONFIG } from '../../config/api.config';
 import { IAdminAuthService } from '../interfaces/IAdminAuthService';
 import { adminAuthStorage } from '../storage/adminAuthStorage';
-import type { ApiResponse, AdminLoginResponse } from '../../types/admin.types';
+import type { ApiResponse, AdminLoginResponse } from '../../types/common.types';
 
 export class AdminAuthService implements IAdminAuthService {
     constructor(private readonly httpClient: IHttpClient) {}

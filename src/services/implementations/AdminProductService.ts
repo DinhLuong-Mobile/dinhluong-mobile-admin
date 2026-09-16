@@ -1,8 +1,8 @@
     import { IHttpClient } from '../../api/IHttpClient';
     import { API_CONFIG } from '../../config/api.config';
     import { IAdminProductService } from '../interfaces/IAdminProductService';
-    import type { ApiResponse, PageableResponse, ProductCardResponse, BulkStockUpdateRequest } from '../../types/common.types';
-
+    import type { ApiResponse } from '../../types/common.types';
+ import type {  PageableResponse, ProductCardResponse, BulkStockUpdateRequest } from '../../types/product.types';
     export class AdminProductService implements IAdminProductService {
         constructor(private readonly httpClient: IHttpClient) {}
 
