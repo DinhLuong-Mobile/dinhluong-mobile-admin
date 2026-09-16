@@ -122,6 +122,31 @@ export interface ComboProduct {
   rawPrice: number;     // 450000 (để tính toán nếu cần)
   rawDiscount: number;
 }
-
+// Bổ sung vào cuối file src/types/product.types.ts
+export interface ProductResponse {
+    id: number;
+    name: string;
+    slug: string;
+    displayPrice: number;
+    originalPrice: number;
+    thumbnailUrl: string;
+    brandName: string;
+    categoryName: string;
+    status: string;
+    totalVariants: number;
+    outOfStockVariantCount: number;
+    lowStockVariantCount: number;
+    totalStock: number;
+    soldQuantity: number;
+    isFeatured: boolean;
+    createdAt: string;
+}
+export interface ProductOverviewStats {
+    totalProducts: number;
+    activeProducts: number;
+    inactiveProducts: number;
+    outOfStockVariants: number;
+    lowStockVariants: number;
+}
 // Type cho phản hồi API Combo
 export type ComboResponse = ComboProduct[];

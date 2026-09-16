@@ -13,7 +13,7 @@ export interface ProductFilterParams {
     productType?: 'MAIN' | 'ACCESSORY';
 }
 
-class ProductAdminService {
+class AdminProductService {
     private getAuthHeaders() {
         const userStr = localStorage.getItem('user');
         const token = userStr ? JSON.parse(userStr).token : '';
@@ -214,4 +214,4 @@ class ProductAdminService {
 }
 // Lưu ý: Ở file ProductCreate và ProductManager, bạn đang gọi là `productService`
 // Nên chỗ này tôi đổi lại tên export cho khớp với file cũ để bạn không phải đi tìm sửa từng chỗ import nhé.
-export const productAdminService = new ProductAdminService();
+export const AdminProductService = new AdminProductService();

@@ -7,7 +7,7 @@ import {
     PlusOutlined, MinusCircleOutlined, SaveOutlined, ArrowLeftOutlined, UploadOutlined, RobotOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { productAdminService } from '../../../../services/productAdminService'; 
+import { AdminProductService } from '../../../../services/implementations/AdminProductService'; 
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -84,9 +84,9 @@ const ProductCreate: React.FC = () => {
 
             try {
                 const [catRes, brandRes, specRes] = await Promise.all([
-                    productAdminService.getCategories(),
-                    productAdminService.getBrands(),
-                    productAdminService.getSpecGroups()
+                    AdminProductService.getCategories(),
+                    AdminProductService.getBrands(),
+                    AdminProductService.getSpecGroups()
                 ]);
 
                 if (catRes) setCategories(catRes.data || catRes);

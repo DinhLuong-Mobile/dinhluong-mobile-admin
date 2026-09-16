@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Row, Col, Card, Statistic, Typography } from 'antd';
 import { 
     AppstoreOutlined, 
@@ -7,39 +7,13 @@ import {
     StopOutlined,
     InboxOutlined
 } from '@ant-design/icons';
-import { productService } from '../../../service/productService'; // Chỉnh đường dẫn cho đúng
-import { productAdminService } from '../../../services/productAdminService';
+import { useProductMiniDashboard } from './useProductMiniDashboard';
 
 const { Text } = Typography;
 
-interface StatsData {
-    totalProducts: number;
-    activeProducts: number;
-    inactiveProducts: number;
-    outOfStockVariants: number;
-    lowStockVariants: number;
-}
-
 const ProductMiniDashboard: React.FC = () => {
-    const [stats, setStats] = useState<StatsData | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-
-    const fetchStats = async () => {
-        try {
-            setLoading(true);
-            // Bạn cần thêm hàm getOverviewStats vào productAdminService của bạn
-            const response = await productAdminService.getOverviewStats(); 
-            setStats(response.data);
-        } catch (error) {
-            console.error("Lỗi tải thống kê tổng quan", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchStats();
-    }, []);
+    // Gọi custom hook để lấy data
+    const { stats, loading } = useProductMiniDashboard();
 
     return (
         <div style={{ marginBottom: 24 }}>

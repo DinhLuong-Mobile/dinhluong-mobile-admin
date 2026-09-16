@@ -34,10 +34,11 @@ export const useOrderManager = () => {
         const fetchOrders = async () => {
             setLoading(true);
             try {
+                const apiPage = currentPage > 0 ? currentPage - 1 : 0;
                 const params = {
                     status: activeTab !== 'ALL' ? activeTab : undefined,
                     keyword: searchText,
-                    page: currentPage,
+                    page: apiPage,
                     size: pageSize
                 };
                 const response = await adminOrderService.getAllOrders(params);
